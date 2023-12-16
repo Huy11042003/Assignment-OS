@@ -83,7 +83,7 @@ struct vm_rg_struct *get_symrg_byid(struct mm_struct *mm, int rgid)
 int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr)
 {
   //pthread_mutex_lock(&mem_lock); //lock
-  //printf("Alloc here! proc %d, vmaid %d, rgid %d, size %d\n", caller->pid, vmaid, rgid, size);
+  printf("Alloc here! proc %d, vmaid %d, rgid %d, size %d\n", caller->pid, vmaid, rgid, size);
   /*Allocate at the toproof */
   struct vm_rg_struct rgnode;
   //có cần align không? -> align cái start là ok
@@ -91,7 +91,7 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
   {
     caller->mm->symrgtbl[rgid].rg_start = rgnode.rg_start;
     caller->mm->symrgtbl[rgid].rg_end = rgnode.rg_end;
-    //printf("Alloc get enough free region, start %ld, end %ld\n", rgnode.rg_start, rgnode.rg_end);
+    printf("Alloc get enough free region, start %ld, end %ld\n", rgnode.rg_start, rgnode.rg_end);
 
     *alloc_addr = rgnode.rg_start;
     //pthread_mutex_unlock(&mem_lock); //unlock
@@ -117,7 +117,7 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
 
     cur_vma->sbrk = old_sbrk + inc_sz;// Cập nhật sbrk?? aligned
     //Cập nhật pgd? hàm inc trên làm r
-    //printf("Alloc need to incr, start %ld, end %ld, sbrk %ld\n", caller->mm->symrgtbl[rgid].rg_start, caller->mm->symrgtbl[rgid].rg_end, cur_vma->sbrk);
+    printf("Alloc need to incr, start %ld, end %ld, sbrk %ld\n", caller->mm->symrgtbl[rgid].rg_start, caller->mm->symrgtbl[rgid].rg_end, cur_vma->sbrk);
   }
   //pthread_mutex_unlock(&mem_lock);  //unlock
   return 0;
@@ -134,7 +134,7 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
 int __free(struct pcb_t *caller, int vmaid, int rgid)
 {
   //pthread_mutex_lock(&mem_lock);
-  //printf("Free here, proc %d, vmaid %d, rgid %d\n", caller->pid, vmaid, rgid);
+  printf("Free here, proc %d, vmaid %d, rgid %d\n", caller->pid, vmaid, rgid);
   //ncl set cái rgid đó start = end = -1,
   //Set bit present = 0
   //Có trong RAM/ SWP thì xóa (cho vào freelist)
@@ -154,10 +154,10 @@ int __free(struct pcb_t *caller, int vmaid, int rgid)
   //Xóa trong RAM/ SWP, đem ra ngoài RAM hết!
   //Cần có được pgn, pte, start/end -> byte addressable, chưa align đâu
   if(currg->rg_start % PAGING_PAGESZ != 0) { //Kiểm tra lại page_align
-    //printf("Region start is not aligned, currg->rg_start %ld\n", currg->rg_start);
+    printf("Region start is not aligned, currg->rg_start %ld\n", currg->rg_start);
   }
   if(currg->rg_start == -1) { //Double free, unsigned ??? <0 k dc dau
-    //printf("Double free region %d, free_rg->rg_start %ld, free_rg->rg_end %ld\n", rgid, currg->rg_start, currg->rg_end);
+    printf("Double free region %d, free_rg->rg_start %ld, free_rg->rg_end %ld\n", rgid, currg->rg_start, currg->rg_end);
     //pthread_mutex_unlock(&mem_lock);
     return 0;
   }
@@ -178,10 +178,10 @@ int __free(struct pcb_t *caller, int vmaid, int rgid)
   /*enlist the obsoleted memory region*/
   enlist_vm_freerg_list(caller->mm, free_rg);
 
-  //printf("Free duoc 1 region, free_rg->rg_start %ld, free_rg->rg_end %ld\n", free_rg->rg_start, free_rg->rg_end);
+  printf("Free duoc 1 region, free_rg->rg_start %ld, free_rg->rg_end %ld\n", free_rg->rg_start, free_rg->rg_end);
   // Set cho cái variable đó không còn sài (write/read) được nữa
-  //printf("Free region list: \n");
-  //print_list_rg(caller->mm->mmap->vm_freerg_list);
+  printf("Free region list: \n");
+  print_list_rg(caller->mm->mmap->vm_freerg_list);
   currg->rg_end = -1;
   currg->rg_start = -1;
   //pthread_mutex_unlock(&mem_lock);
@@ -199,7 +199,7 @@ int pgalloc(struct pcb_t *proc, uint32_t size, uint32_t reg_index)
   pthread_mutex_lock(&mem_lock);
   /* By default using vmaid = 0 */
   ret = __alloc(proc, 0, reg_index, size, &addr);
-  //printf("Data in RAM\n");
+  printf("Data in RAM\n");
   MEMPHY_dump(proc->mram);
   pthread_mutex_unlock(&mem_lock);
   return ret;
@@ -228,13 +228,13 @@ int set_page_hit_cur_to_zero(struct mm_struct *mm, int pgn) {
         if (current_node->pgn == pgn && current_node->owner == mm) {
             // Found the page node, set cur to zero
             current_node->cur = 0;
-            //printf("Page hit: Page number %d's 'cur' value set to 0\n", pgn);
+            printf("Page hit: Page number %d's 'cur' value set to 0\n", pgn);
             return 0; // Success
         }
         current_node = current_node->pg_next; // Move to the next node in the list
     }
 
-    //printf("Page number %d not found in the list\n", pgn);
+    printf("Page number %d not found in the list\n", pgn);
     return -1; // Indicate failure: page not found
 }
 
@@ -249,18 +249,18 @@ int set_page_hit_cur_to_zero(struct mm_struct *mm, int pgn) {
 int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller) 
 {
   uint32_t pte = mm->pgd[pgn]; // mm sài chung???-> riêng! nma rồi vào trong pgd là riêng 
-  //printf("Tim page de read/write\n");
+  printf("Tim page de read/write\n");
   if (!PAGING_PAGE_PRESENT(pte)) //free roi thi tinh sao? free->bit present/ swap-> bit swap
   {
 
-    //printf("Page khong ton tai\n");
+    printf("Page khong ton tai\n");
     fpn = NULL;
     return -1; // non exist in RAM or SWP, bị freed 
   }
   else { //chưa bị delete
     if(!PAGING_PAGE_IN_SWAP(pte)) { //không trong swp -> khỏe rồi, trong RAM
       *fpn = PAGING_FPN(pte);
-      //printf("Page trong RAM\n");
+      printf("Page trong RAM\n");
       set_page_hit_cur_to_zero(mm, pgn);
       return 0;
     }
@@ -270,7 +270,16 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
       int tgtfpn = PAGING_SWP(pte);//the target frame storing our variable, nằm trong SWAP
       //Trước tiên cứ tìm freeframe đã, nmà theo yêu cầu của thầy là không cần 
       int vicfpn;
-        //printf("Tim victim\n");
+      /*if(MEMPHY_get_freefp(caller->mram, &vicfpn) == 0) {
+        __swap_cp_page(caller->active_mswp, tgtfpn, caller->mram, vicfpn);
+        *fpn = vicfpn;
+        pte_set_fpn(mm->pgd + pgn, vicfpn); // cập nhật lại fpn của pte(hay mm->pgd[pgn]) trỏ tới 
+        enlist_pgn_node(&global_fifo, pgn, caller->mm); //Dùng global
+        caller->mm->fifo_pgn = global_fifo;
+
+      } else {  //không có frame trống
+      */
+        printf("Tim victim\n");
         int vicpgn, swpfpn; 
         uint32_t vicpte;
 
@@ -282,13 +291,13 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
         // làm:... convert victim page -> victim frame
         vicpte = ret_ptbl[vicpgn]; //caller->mm->pgd[vicpgn]; // Chac gi no thuoc pgd cua mm cua caller?
         if(!PAGING_PAGE_IN_SWAP(vicpte)) { 
-          //printf("Victim o trong RAM\n");
+          printf("Victim o trong RAM\n");
           vicfpn = PAGING_FPN(vicpte); //Lấy được cái fpn (đang trong RAM) của proc nào đó (không phải thằng caller) 
                                       //Thằng này sau khi swap out ra thì sẽ được tgtfpn copy content vô
         }
         else{
           while(PAGING_PAGE_IN_SWAP(vicpte)){
-            //printf("Victim o trong SWAP\n"); //lỗi này căng
+            printf("Victim o trong SWAP\n"); //lỗi này căng
             find_victim_page(caller->mm, &vicpgn, &ret_ptbl);
             vicpte = ret_ptbl[vicpgn];
           }
@@ -300,54 +309,54 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
 
         /* Do swap frame from MEMRAM to MEMSWP and vice versa*/
         /* Copy victim frame to swap */
-        //printf("data in RAM before copy content\n");
+        printf("data in RAM before copy content\n");
         MEMPHY_dump(caller->mram); 
-        //printf("...xong roi\n");
-        //printf("data in SWAP before copy content\n");
+        printf("...xong roi\n");
+        printf("data in SWAP before copy content\n");
         MEMPHY_dump(caller->active_mswp);
-        //printf("...xong roi\n");
+        printf("...xong roi\n");
         __swap_cp_page(caller->mram, vicfpn, caller->active_mswp, swpfpn);
-        //printf("data in RAM after copy content\n");
+        printf("data in RAM after copy content\n");
         MEMPHY_dump(caller->mram); 
-        //printf("...xong roi\n");
-        //printf("data in SWAP after copy content\n");
+        printf("...xong roi\n");
+        printf("data in SWAP after copy content\n");
         MEMPHY_dump(caller->active_mswp);
-        //printf("...xong roi\n");
+        printf("...xong roi\n");
 
-        //printf("target frame in SWAP %d\n", tgtfpn);
-        //printf("victim page %d was mapped to victim frame %d\n", vicpgn, vicfpn);
-        //printf("new frame number in SWAP to store victim %d\n", swpfpn);
+        printf("target frame in SWAP %d\n", tgtfpn);
+        printf("victim page %d was mapped to victim frame %d\n", vicpgn, vicfpn);
+        printf("new frame number in SWAP to store victim %d\n", swpfpn);
 
         // Cập nhật lại PTE chứ, của thằng owner (ret_ptbl) bị swap out ấy
         //PAGING_PTE_SET_IN_SWAP(ret_ptbl[vicpgn]);
         //Nếu trước đó nó đã bị free -> bit present = 0 thì vẫn giữ như vậy
         int exist = 1; 
         if(!PAGING_PAGE_PRESENT(ret_ptbl[vicpgn])) {
-          //printf("Frame nay bi free truoc do\n");
+          printf("Frame nay bi free truoc do\n");
           exist = 0;
         }
         pte_set_swap(ret_ptbl + vicpgn, 0, swpfpn); // victim page của proc nào đó giờ PTE nó cập nhật về swpfpn
         if(!exist) CLRBIT(*(ret_ptbl + vicpgn), PAGING_PTE_PRESENT_MASK);
         if(!PAGING_PAGE_PRESENT(ret_ptbl[vicpgn])) {
-          //printf("Confirm giu lai\n");
+          printf("Confirm giu lai\n");
         }
-        //printf("DATA in SWAP: ");
+        printf("DATA in SWAP: ");
         MEMPHY_dump(caller->active_mswp);
-        //printf("...xong roi\n");
+        printf("...xong roi\n");
         /* Copy target frame from swap to mem */
-        //printf("data in RAM before copy content\n");
+        printf("data in RAM before copy content\n");
         MEMPHY_dump(caller->mram); 
-        //printf("...xong roi\n");
-        //printf("data in SWAP before copy content\n");
+        printf("...xong roi\n");
+        printf("data in SWAP before copy content\n");
         MEMPHY_dump(caller->active_mswp);
-        //printf("...xong roi\n");
+        printf("...xong roi\n");
         __swap_cp_page(caller->active_mswp, tgtfpn, caller->mram, vicfpn); //chắc gì nó cùng proccess?
-        //printf("data in RAM after copy content\n");
+        printf("data in RAM after copy content\n");
         MEMPHY_dump(caller->mram); 
-        //printf("...xong roi\n");
-        //printf("data in SWAP after copy content\n");
+        printf("...xong roi\n");
+        printf("data in SWAP after copy content\n");
         MEMPHY_dump(caller->active_mswp);
-        //printf("...xong roi\n");
+        printf("...xong roi\n");
         *fpn = vicfpn;
         //*fpn = ret_fr; //đây nè      //int ret_fr = 0; //để đảm bảo cập nhật cho fpn chính xác hơn, do fpn là ptr
 
@@ -375,9 +384,9 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
   }
 
   //*fpn = PAGING_FPN(pte);
-  //printf("DATA in RAM ");
+  printf("DATA in RAM ");
   MEMPHY_dump(caller->mram);
-  //printf("...xong roi\n");
+  printf("...xong roi\n");
   return 0;
 }
 
@@ -399,7 +408,7 @@ int pg_getval(struct mm_struct *mm, int addr, BYTE *data, struct pcb_t *caller)
 
   int phyaddr = (fpn << PAGING_ADDR_FPN_LOBIT) + off;
 
-  //printf("fpn %d, read at %d in physic\n",fpn, phyaddr);
+  printf("fpn %d, read at %d in physic\n",fpn, phyaddr);
   MEMPHY_read(caller->mram,phyaddr, data);
 
   return 0;
@@ -424,7 +433,7 @@ int pg_setval(struct mm_struct *mm, int addr, BYTE value, struct pcb_t *caller)
 
   int phyaddr = (fpn << PAGING_ADDR_FPN_LOBIT) + off;
 
-  //printf("fpn %d, write at %d in physic\n",fpn, phyaddr);
+  printf("fpn %d, write at %d in physic\n",fpn, phyaddr);
 
   MEMPHY_write(caller->mram,phyaddr, value);
 
@@ -447,15 +456,15 @@ int __read(struct pcb_t *caller, int vmaid, int rgid, int offset, BYTE *data)
 
   if(currg == NULL || cur_vma == NULL) /* Invalid memory identify */
 	  return -1;
-  //printf("Read here! Proc %d, vmaid %d, rgid %d, rg->start %ld (256?), rg->end %ld\n", caller->pid, vmaid, rgid, currg->rg_start, currg->rg_end);
+  printf("Read here! Proc %d, vmaid %d, rgid %d, rg->start %ld (256?), rg->end %ld\n", caller->pid, vmaid, rgid, currg->rg_start, currg->rg_end);
 //Thêm để kiểm tra xem region muốn vào bị free chưa
   if( (currg->rg_start == currg->rg_end) && (currg->rg_start == -1) ) {
-    //printf("Read in freed region\n");
+    printf("Read in freed region\n");
     //return -1;
   }
   //Thêm để kiểm tra nó có đọc ngoài vùng không?
   if( (currg->rg_start + offset) >= currg->rg_end ) {
-    //printf("Invalid access for this region, Out of range\n");
+    printf("Invalid access for this region, Out of range\n");
     //return -1;
   }
 
@@ -503,19 +512,19 @@ int __write(struct pcb_t *caller, int vmaid, int rgid, int offset, BYTE value)
   
   if(currg == NULL || cur_vma == NULL) /* Invalid memory identify */
 	  return -1;
-  //printf("Write here! Proc %d, vmaid %d, rgid %d, rg->start %ld (256?), rg->end %ld\n", caller->pid, vmaid, rgid, currg->rg_start, currg->rg_end);
+  printf("Write here! Proc %d, vmaid %d, rgid %d, rg->start %ld (256?), rg->end %ld\n", caller->pid, vmaid, rgid, currg->rg_start, currg->rg_end);
 
   //Thêm để kiểm tra xem region muốn vào bị free chưa
   if( (currg->rg_start == currg->rg_end) && (currg->rg_start == -1) ) {
-    //printf("Write in freed region\n");
+    printf("Write in freed region\n");
     //return -1;
   }
   //Thêm để kiểm tra nó có đọc ngoài vùng không?
   if( (currg->rg_start + offset) >= currg->rg_end ) {
-    //printf("Invalid access for this region, Out of range\n");
+    printf("Invalid access for this region, Out of range\n");
     //return -1;
   }
-  //printf("write at %ld in virtual\n", currg->rg_start + offset);
+  printf("write at %ld in virtual\n", currg->rg_start + offset);
   pg_setval(caller->mm, currg->rg_start + offset, value, caller); //hàm này vẫn phải ktra cho chắc
 
   return 0;
@@ -538,7 +547,7 @@ int pgwrite(
 #endif
   int ret;
   ret = __write(proc, 0, destination, offset, data);
-  //printf("write finish\n");
+  printf("write finish\n");
   MEMPHY_dump(proc->mram);
   pthread_mutex_unlock(&mem_lock);
   return ret;
@@ -628,7 +637,7 @@ int inc_vma_limit(struct pcb_t *caller, int vmaid, int inc_sz) // chỉ gọi kh
   struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
 
   int old_end = cur_vma->vm_end; // = sbrk?
-  //printf("to incr vma limit, vmaid %d, inc_amt %d ?=? inc_sz %d\n", vmaid, inc_amt, inc_sz);
+  printf("to incr vma limit, vmaid %d, inc_amt %d ?=? inc_sz %d\n", vmaid, inc_amt, inc_sz);
   
   /*Validate overlap of obtained region */
   if (validate_overlap_vm_area(caller, vmaid, area->rg_start, area->rg_end) < 0) //mấy thằng chưa align ấy
@@ -636,16 +645,16 @@ int inc_vma_limit(struct pcb_t *caller, int vmaid, int inc_sz) // chỉ gọi kh
 
   /* The obtained vm area (only) 
    * now will be alloc real ram region */
-  //printf("Check truoc khi thay doi cur_vma->vm_start %ld, cur_vma->vm_end %ld\n", cur_vma->vm_start, cur_vma->vm_end);
+  printf("Check truoc khi thay doi cur_vma->vm_start %ld, cur_vma->vm_end %ld\n", cur_vma->vm_start, cur_vma->vm_end);
   cur_vma->vm_end += inc_sz; //cập nhật luôn cái end cơ à, không phải end cố định còn sbrk tăng giảm à :))
                         //ủa sao không cộng cái align? cái inc_sz cx align rồi
   if (vm_map_ram(caller, area->rg_start, area->rg_end, 
                     old_end, incnumpage , newrg) < 0)
     return -1; /* Map the memory to MEMRAM */
-  //printf("Check after, area, area_sbrk ?==? newrg:\n");
-  //printf("cur_vma->vm_start %ld, cur_vma->vm_end %ld\n", cur_vma->vm_start, cur_vma->vm_end);
-  //printf("area_sbrk->rg_start %ld, area_sbrk->rg_end %ld\n", area->rg_start, area->rg_end);
-  //printf("newrg->start %ld, newrg->end %ld\n", newrg->rg_start, newrg->rg_end);
+  printf("Check after, area, area_sbrk ?==? newrg:\n");
+  printf("cur_vma->vm_start %ld, cur_vma->vm_end %ld\n", cur_vma->vm_start, cur_vma->vm_end);
+  printf("area_sbrk->rg_start %ld, area_sbrk->rg_end %ld\n", area->rg_start, area->rg_end);
+  printf("newrg->start %ld, newrg->end %ld\n", newrg->rg_start, newrg->rg_end);
         
   //thêm, có cái newrg xong làm gì? newrg với area là 1 à?
   return 0;
@@ -660,8 +669,8 @@ int inc_vma_limit(struct pcb_t *caller, int vmaid, int inc_sz) // chỉ gọi kh
 int find_victim_page(struct mm_struct *mm, int *retpgn, uint32_t** ret_ptbl) 
 {
   struct pgn_t *pg = global_lru; //thay luôn mm->fifo_pgn;
-  //printf("Before find victim\n");
-  //print_list_pgn(global_lru);
+  printf("Before find victim\n");
+  print_list_pgn(global_lru);
 
   /* TODO: Implement the theorical mechanism to find the victim page */
   if(pg == NULL) {
@@ -738,11 +747,11 @@ int get_free_vmrg_area(struct pcb_t *caller, int vmaid, int size, struct vm_rg_s
   struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
 
   struct vm_rg_struct *rgit = cur_vma->vm_freerg_list;
-  //print_list_rg(rgit);
+  print_list_rg(rgit);
   if (rgit == NULL)
     return -1;
 
-  //printf("Get free vmrg in list region, size %d align_size: %d\n", size, align_size);
+  printf("Get free vmrg in list region, size %d align_size: %d\n", size, align_size);
   int i = 0;
   /* Probe unintialized newrg */
   newrg->rg_start = newrg->rg_end = -1;
@@ -751,7 +760,7 @@ int get_free_vmrg_area(struct pcb_t *caller, int vmaid, int size, struct vm_rg_s
   while (rgit != NULL)
   {
     i++;
-    //printf("Duyet thang thu %d rg_start %ld, rg_end %ld\n", i, rgit->rg_start, rgit->rg_end);
+    printf("Duyet thang thu %d rg_start %ld, rg_end %ld\n", i, rgit->rg_start, rgit->rg_end);
     if ((rgit->rg_start % PAGING_PAGESZ != 0) || (rgit->rg_end % PAGING_PAGESZ != 0)) {//thêm để kiểm tra xem nó align chưa
       printf("Not aligned???\n");
     }
@@ -760,7 +769,7 @@ int get_free_vmrg_area(struct pcb_t *caller, int vmaid, int size, struct vm_rg_s
     { /* Current region has enough space */
       newrg->rg_start = rgit->rg_start;
       newrg->rg_end = rgit->rg_start + size; //end thì tới size thôi
-      //printf("Chon thang nay, new_rg_start %ld, new_rg_end %ld\n",newrg->rg_start, newrg->rg_end);
+      printf("Chon thang nay, new_rg_start %ld, new_rg_end %ld\n",newrg->rg_start, newrg->rg_end);
       //Set bit present
       int numpages = (PAGING_PAGE_ALIGNSZ(newrg->rg_end - newrg->rg_start)) / PAGING_PAGESZ;
       int pgn_start = PAGING_PGN(newrg->rg_start);
@@ -769,11 +778,11 @@ int get_free_vmrg_area(struct pcb_t *caller, int vmaid, int size, struct vm_rg_s
         SETBIT((caller->mm->pgd[i]), PAGING_PTE_PRESENT_MASK);
         if(!PAGING_PAGE_IN_SWAP(caller->mm->pgd[i])) {
           int fpn = PAGING_FPN(caller->mm->pgd[i]);
-          //printf("proc %d, page %d is mapped to frame %d in RAM\n", caller->pid, i, fpn);
+          printf("proc %d, page %d is mapped to frame %d in RAM\n", caller->pid, i, fpn);
         }
         else {
           int fpn = PAGING_SWP(caller->mm->pgd[i]);
-          //printf("proc %d, page %d is mapped to frame %d in SWAP\n", caller->pid, i, fpn);
+          printf("proc %d, page %d is mapped to frame %d in SWAP\n", caller->pid, i, fpn);
         }
       }
       /*for(int i = pgn_start + numpages; i < (pgn_start + numpages + 3); i++) {
@@ -788,11 +797,11 @@ int get_free_vmrg_area(struct pcb_t *caller, int vmaid, int size, struct vm_rg_s
       }*/
 
       /* Update left space in chosen region */
-      //printf("Cap nhat remaining free region\n");
+      printf("Cap nhat remaining free region\n");
       if (rgit->rg_start + align_size < rgit->rg_end)//(rgit->rg_start + size < rgit->rg_end)
       {
         rgit->rg_start = rgit->rg_start + align_size;//rgit->rg_start = rgit->rg_start + size; -> start cần align
-        //printf("free region con du cho, rg_start sau upd %ld\n", rgit->rg_start);
+        printf("free region con du cho, rg_start sau upd %ld\n", rgit->rg_start);
       }
       else
       { /*Use up all space, remove current node */
@@ -806,13 +815,13 @@ int get_free_vmrg_area(struct pcb_t *caller, int vmaid, int size, struct vm_rg_s
           rgit->rg_end = nextrg->rg_end;
 
           rgit->rg_next = nextrg->rg_next;
-          //printf("Phai qua free region next ?256?, rg_start %ld rg_end %ld\n", rgit->rg_start, rgit->rg_end);
+          printf("Phai qua free region next ?256?, rg_start %ld rg_end %ld\n", rgit->rg_start, rgit->rg_end);
           free(nextrg);
         }
         else
         { /*End of free list */
           rgit->rg_start = rgit->rg_end;	//dummy, size 0 region
-          //printf("Het cho roi, rg_start %ld rg_end %ld\n", rgit->rg_start, rgit->rg_end);
+          printf("Het cho roi, rg_start %ld rg_end %ld\n", rgit->rg_start, rgit->rg_end);
           rgit->rg_next = NULL;
         }
       }

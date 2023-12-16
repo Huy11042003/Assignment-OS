@@ -164,7 +164,7 @@ int MEMPHY_dump(struct memphy_struct * mp)
 
     // bỏ qua cx đc, in ra chỗ nào khác 0
     for(int i = 0; i < mp->maxsz; i++) {
-      //if(mp->storage[i] != 0) printf("At byte %d: %c\n", i, mp->storage[i]);
+      if(mp->storage[i] != 0) printf("At byte %d: %c\n", i, mp->storage[i]);
     }
     return 0;
 }

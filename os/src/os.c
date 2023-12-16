@@ -54,7 +54,10 @@ static void * cpu_routine(void * args) {
 			/* No process is running, the we load new process from
 		 	* ready queue */
 			proc = get_proc();
-			
+			if (proc == NULL) {
+                           next_slot(timer_id);
+                           continue; /* First load failed. skip dummy load */
+                        }
 		}else if (proc->pc == proc->code->size) {
 			/* The porcess has finish it job */
 			printf("\tCPU %d: Processed %2d has finished\n",
@@ -180,12 +183,27 @@ static void read_config(const char * path) {
 		ld_processes.path[i][0] = '\0';
 		strcat(ld_processes.path[i], "input/proc/");
 		char proc[100];
-#ifdef MLQ_SCHED
-		fscanf(file, "%lu %s %lu\n", &ld_processes.start_time[i], proc, &ld_processes.prio[i]);
-#else
+// #ifdef MLQ_SCHED
+// 		fscanf(file, "%lu %s %lu\n", &ld_processes.start_time[i], proc, &ld_processes.prio[i]);
+// #else
+// 		fscanf(file, "%lu %s\n", &ld_processes.start_time[i], proc);
+// #endif
+// 		strcat(ld_processes.path[i], proc);
+#ifdef SCHED
 		fscanf(file, "%lu %s\n", &ld_processes.start_time[i], proc);
-#endif
+
 		strcat(ld_processes.path[i], proc);
+		FILE* procFile;
+		if ((procFile = fopen(ld_processes.path[i], "r")) == NULL) {
+			printf("Cannot find configure file at %s\n", path);
+			exit(1);
+		}
+		fscanf(procFile, "%lu", &ld_processes.prio[i]);
+		fclose(procFile);
+#else
+		fscanf(file, "%lu %s %lu\n", &ld_processes.start_time[i], proc, &ld_processes.prio[i]);
+		strcat(ld_processes.path[i], proc);
+#endif
 	}
 }
 
@@ -267,6 +285,7 @@ int main(int argc, char * argv[]) {
 	return 0;
 
 }
+
 
 
 

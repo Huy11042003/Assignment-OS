@@ -90,7 +90,7 @@ int pte_set_fpn(uint32_t *pte, int fpn)
   //PAGING_PTE_FPN_LOBIT  PAGING_ADDR_OFFST_LOBIT
   ///PAGING_ADDR_FPN_LOBIT  PAGING_ADDR_PGN_LOBIT
   int fpn_t = PAGING_FPN(*pte); //PAGING_PGN(*pte) -> disaster!!!!!!!
-  //printf("frame %d is mapped to frame %d in RAM\n", fpn, fpn_t);
+  printf("frame %d is mapped to frame %d in RAM\n", fpn, fpn_t);
 
   return 0;
 }
@@ -133,9 +133,9 @@ int vmap_page_range(struct pcb_t *caller, // process call
     }
     pte_set_fpn(caller->mm->pgd + (pgn+pgit), fpit2->fpn); //map cái pte tại idx với cái frame trống 
     //kiểm tra khi alloc
-    //printf("proc %d, page %d is mapped to frame %d\n", caller->pid, pgn+pgit, fpit2->fpn);
+    printf("proc %d, page %d is mapped to frame %d\n", caller->pid, pgn+pgit, fpit2->fpn);
     int fpn_t = PAGING_FPN(caller->mm->pgd[pgn+pgit]);
-    //printf("proc %d, page %d is mapped to frame %d in RAM\n", caller->pid, pgn+pgit, fpn_t);
+    printf("proc %d, page %d is mapped to frame %d in RAM\n", caller->pid, pgn+pgit, fpn_t);
 
    /* Tracking for later page replacement activities (if needed)
     * Enqueue new usage page */
@@ -175,13 +175,13 @@ int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struc
 {
   int pgit, fpn;
   //struct framephy_struct *newfp_str;
-  //printf("Kiem cho du chung nay free_frame trong RAM %d\n", req_pgnum);
+  printf("Kiem cho du chung nay free_frame trong RAM %d\n", req_pgnum);
   for(pgit = 0; pgit < req_pgnum; pgit++)
   {
     if(MEMPHY_get_freefp(caller->mram, &fpn) == 0) // alloc thi cbi dc dung -> cut khoi freelist
    {
      // TODO thay quen :))
-      //printf("Co free frame\n");
+      printf("Co free frame\n");
       struct framephy_struct* tobe_add = malloc(sizeof(struct framephy_struct));
       tobe_add->fpn = fpn;
       tobe_add->fp_next = (*frm_lst);
@@ -214,11 +214,11 @@ int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struc
       if(!PAGING_PAGE_IN_SWAP(vicpte)) { 
         vicfpn = PAGING_FPN(vicpte); //Lấy được cái fpn (đang trong RAM) của proc nào đó (không phải thằng caller) 
                                     //Thằng này sau khi swap out ra thì sẽ được tgtfpn copy content vô
-        //printf("Victim o trong RAM, victim frame %d\n", vicfpn);
+        printf("Victim o trong RAM, victim frame %d\n", vicfpn);
       }
       else{
         while(PAGING_PAGE_IN_SWAP(vicpte)){
-          //printf("Victim o trong SWAP!!!\n"); //lỗi này căng
+          printf("Victim o trong SWAP!!!\n"); //lỗi này căng
           find_victim_page(caller->mm, &vicpgn, &ret_ptbl);
           vicpte = ret_ptbl[vicpgn];
         }
@@ -227,34 +227,34 @@ int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struc
      
       /* Get free frame in MEMSWP */
       MEMPHY_get_freefp(caller->active_mswp, &swpfpn);
-      //printf("this frame then move to frame %d in SWAP\n", swpfpn);
+      printf("this frame then move to frame %d in SWAP\n", swpfpn);
       /* Do swap frame from MEMRAM to MEMSWP and vice versa*/
       /* Copy victim frame to swap */
-      //printf("data in RAM before copy content\n");
+      printf("data in RAM before copy content\n");
       MEMPHY_dump(caller->mram); 
-      //printf("...xong roi\n");
-      //printf("data in SWAP before copy content\n");
+      printf("...xong roi\n");
+      printf("data in SWAP before copy content\n");
       MEMPHY_dump(caller->active_mswp);
-      //printf("...xong roi\n");
+      printf("...xong roi\n");
       __swap_cp_page(caller->mram, vicfpn, caller->active_mswp, swpfpn);
-      //printf("data in RAM after copy content\n");
+      printf("data in RAM after copy content\n");
       MEMPHY_dump(caller->mram); 
-      //printf("...xong roi\n");
-      //printf("data in SWAP after copy content\n");
+      printf("...xong roi\n");
+      printf("data in SWAP after copy content\n");
       MEMPHY_dump(caller->active_mswp);
-      //printf("...xong roi\n");
-      //printf("victim frame in RAM move to SWAP frame %d\n", swpfpn);
+      printf("...xong roi\n");
+      printf("victim frame in RAM move to SWAP frame %d\n", swpfpn);
       // Cập nhật lại PTE chứ, của thằng owner (ret_ptbl) bị swap out ấy
       //Nếu trước đó nó đã bị free -> bit present = 0 thì vẫn giữ như vậy
       int exist = 1; 
       if(!PAGING_PAGE_PRESENT(ret_ptbl[vicpgn])) {
-       // printf("Frame nay bi free truoc do\n");
+        printf("Frame nay bi free truoc do\n");
         exist = 0;
       }
       pte_set_swap(ret_ptbl + vicpgn, 0, swpfpn); // victim page của proc nào đó giờ PTE nó cập nhật về swpfpn
       if(!exist) CLRBIT(*(ret_ptbl + vicpgn), PAGING_PTE_PRESENT_MASK);
       if(!PAGING_PAGE_PRESENT(ret_ptbl[vicpgn])) {
-        //printf("Confirm giu lai\n");
+        printf("Confirm giu lai\n");
       }
 
       //Thêm frame đó vào freeframe của RAM
@@ -476,7 +476,7 @@ int print_pgtbl(struct pcb_t *caller, uint32_t start, uint32_t end)
   pgn_start = PAGING_PGN(start);
   pgn_end = PAGING_PGN(end);
 
-  //printf("print_pgtbl: %d - %d", start, end);
+  printf("print_pgtbl: %d - %d", start, end);
   if (caller == NULL) {printf("NULL caller\n"); return -1;}
     printf("\n");
 
