@@ -137,7 +137,7 @@ int MEMPHY_format(struct memphy_struct *mp, int pagesz)
     return 0;
 }
 
-int MEMPHY_get_freefp(struct memphy_struct *mp, int *retfpn) //alloc doi thi cho
+int MEMPHY_get_freefp(struct memphy_struct *mp, int *retfpn) 
 {
    struct framephy_struct *fp = mp->free_fp_list;
 

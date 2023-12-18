@@ -109,8 +109,7 @@ int vmap_page_range(struct pcb_t *caller, // process call
   ret_rg->rg_end = ret_rg->rg_start = addr; 
 
   /* TODO map range of frame to address space (virtual address)
-   *      [addr (start) to addr(end -> start + ...) + pgnum*PAGING_PAGESZ (So address dc tang len)
-   *      in page table caller->mm->pgd[]
+   *      in page table 
    */
   
   struct framephy_struct *fpit2 = frames;
@@ -149,7 +148,7 @@ int vmap_page_range(struct pcb_t *caller, // process call
 }
 
 /* 
- * alloc_pages_range - allocate req_pgnum of frame in ram, tìm cho đủ frame trống, k đủ thì làm cho đủ
+ * alloc_pages_range - allocate req_pgnum of frame in ram
  * @caller    : caller
  * @req_pgnum : request page num
  * @frm_lst   : frame list
@@ -261,7 +260,7 @@ int vm_map_ram(struct pcb_t *caller, int astart, int aend, int mapstart, int inc
 
   /* it leaves the case of memory is enough but half in ram, half in swap
    * do the swaping all to swapper to get the all in ram */
-  vmap_page_range(caller, mapstart, incpgnum, frm_lst, ret_rg); //map nhe, cap nhat cai free lsit moi xong
+  vmap_page_range(caller, mapstart, incpgnum, frm_lst, ret_rg); 
 
   if( (ret_rg->rg_start != astart) || (ret_rg->rg_end != aend) ) {
     printf("Mapped region is wrong?\n%ld %d %ld %d\n", ret_rg->rg_start, astart, ret_rg->rg_end, aend);
