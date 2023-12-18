@@ -21,8 +21,8 @@ int init_pte(uint32_t *pte,
              int swptyp, // swap type -> 0
              int swpoff) //swap offset
 {
-  if (pre != 0) { //Tồn tại, chưa bị free
-    if (swp == 0) { // Non swap ~ page online
+  if (pre != 0) { 
+    if (swp == 0) { 
       if (fpn == 0) 
         return -1; // Invalid setting
 
@@ -82,15 +82,10 @@ int pte_set_fpn(uint32_t *pte, int fpn)
   CLRBIT(*pte, PAGING_PTE_SWAPPED_MASK);
 
   SETVAL(*pte, fpn, PAGING_PTE_FPN_MASK, PAGING_PTE_FPN_LOBIT);
-    //int j = 12;
-  /*for(int i = 12; i >= 0; i--) {
-    int bit = (fpn >> i) & 1;
-    set_bit(pte, i, bit);
-  }*/
-  //PAGING_PTE_FPN_LOBIT  PAGING_ADDR_OFFST_LOBIT
-  ///PAGING_ADDR_FPN_LOBIT  PAGING_ADDR_PGN_LOBIT
-  int fpn_t = PAGING_FPN(*pte); //PAGING_PGN(*pte) -> disaster!!!!!!!
-  //printf("frame %d is mapped to frame %d in RAM\n", fpn, fpn_t);
+   
+
+  int fpn_t = PAGING_FPN(*pte); 
+  
 
   return 0;
 }
@@ -109,18 +104,15 @@ int vmap_page_range(struct pcb_t *caller, // process call
   //struct framephy_struct *fpit = malloc(sizeof(struct framephy_struct));
   //int  fpn;
   int pgit = 0;
-  int pgn = PAGING_PGN(addr); // chuyen tu virtual -> index cua PTE
+  int pgn = PAGING_PGN(addr); 
 
-  ret_rg->rg_end = ret_rg->rg_start = addr; // at least the very first space is usable
-
-  //fpit->fp_next = frames; //free frame cbi map
+  ret_rg->rg_end = ret_rg->rg_start = addr; 
 
   /* TODO map range of frame to address space (virtual address)
    *      [addr (start) to addr(end -> start + ...) + pgnum*PAGING_PAGESZ (So address dc tang len)
    *      in page table caller->mm->pgd[]
    */
-  // tom lai la chuyen doi PTE
-  // Lưu ý là có trường hợp map không đủ, vì có thể địa chỉ nó cấp nhiều quá, tràn luôn khỏi số page có thể cấp của pgd
+  
   struct framephy_struct *fpit2 = frames;
   for( ; pgit < pgnum; pgit++) {
     if(fpit2 == NULL) {
@@ -131,11 +123,10 @@ int vmap_page_range(struct pcb_t *caller, // process call
       printf("Out_of_range pgd of alloc\n");
       return -1; //hết chỗ rồi
     }
-    pte_set_fpn(caller->mm->pgd + (pgn+pgit), fpit2->fpn); //map cái pte tại idx với cái frame trống 
-    //kiểm tra khi alloc
-    //printf("proc %d, page %d is mapped to frame %d\n", caller->pid, pgn+pgit, fpit2->fpn);
+    pte_set_fpn(caller->mm->pgd + (pgn+pgit), fpit2->fpn); 
+    
     int fpn_t = PAGING_FPN(caller->mm->pgd[pgn+pgit]);
-    //printf("proc %d, page %d is mapped to frame %d in RAM\n", caller->pid, pgn+pgit, fpn_t);
+    
 
    /* Tracking for later page replacement activities (if needed)
     * Enqueue new usage page */
@@ -147,20 +138,13 @@ int vmap_page_range(struct pcb_t *caller, // process call
       tmp=tmp->pg_next;
     }
    
-    enlist_pgn_node(&global_lru, pgn+pgit, caller->mm); //Dùng global
-    //enlist_pgn_node(&caller->mm->fifo_pgn, pgn+pgit); // cho thì dùng, FIFO
+    enlist_pgn_node(&global_lru, pgn+pgit, caller->mm); 
     caller->mm->lru_pgn = global_lru;
     ret_rg->rg_end = ret_rg->rg_end + PAGING_PAGESZ;
-    fpit2 = fpit2->fp_next; //qua frame tiếp theo
+    fpit2 = fpit2->fp_next; 
   }
 
-  // Dùng xong free chứ?
-  /*free(fpit);
-  while(frames != NULL) {
-    fpit = frames;alloc_pages_range
-    frames = frames->fp_next;
-    free(fpit);
-  }*/
+ 
   return 0;
 }
 
@@ -175,50 +159,40 @@ int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struc
 {
   int pgit, fpn;
   //struct framephy_struct *newfp_str;
-  //printf("Kiem cho du chung nay free_frame trong RAM %d\n", req_pgnum);
+  
   for(pgit = 0; pgit < req_pgnum; pgit++)
   {
-    if(MEMPHY_get_freefp(caller->mram, &fpn) == 0) // alloc thi cbi dc dung -> cut khoi freelist
+    if(MEMPHY_get_freefp(caller->mram, &fpn) == 0) 
    {
-     // TODO thay quen :))
-      //printf("Co free frame\n");
       struct framephy_struct* tobe_add = malloc(sizeof(struct framephy_struct));
       tobe_add->fpn = fpn;
       tobe_add->fp_next = (*frm_lst);
       (*frm_lst) = tobe_add;
 
-   } else {  // ERROR CODE of obtaining some but not enough frames
-      // tìm victim, sau đó bỏ vào freelist frame, giảm pgit, chạy lại
-      printf("Tim victim\n");
+   } else {  
       int vicpgn, swpfpn; 
       int vicfpn;
       uint32_t vicpte;
 
-      /* Find victim page */ //victim page có thể thuộc proc khác, tức pgd khác
       uint32_t * ret_ptbl = NULL;
       find_victim_page(caller->mm, &vicpgn, &ret_ptbl);
       if(vicpgn == -1) {
         printf("Cannot find victim page! %d\n", vicpgn);
       }
 
-      // làm:... convert victim page -> victim frame
       if(ret_ptbl + vicpgn != NULL) {
         printf("ret_ptbl != NULL, victim page %d\n", vicpgn);
       }
       else {
         printf("ret_ptbl == NULL, %p, victim page %d\n", ret_ptbl, vicpgn);
       }
-      vicpte = ret_ptbl[vicpgn]; //caller->mm->pgd[vicpgn]; // Chac gi no thuoc pgd cua mm cua caller?
-      //Chắc gì đã trong frame?
+      vicpte = ret_ptbl[vicpgn]; 
       
       if(!PAGING_PAGE_IN_SWAP(vicpte)) { 
-        vicfpn = PAGING_FPN(vicpte); //Lấy được cái fpn (đang trong RAM) của proc nào đó (không phải thằng caller) 
-                                    //Thằng này sau khi swap out ra thì sẽ được tgtfpn copy content vô
-        //printf("Victim o trong RAM, victim frame %d\n", vicfpn);
+        vicfpn = PAGING_FPN(vicpte); 
       }
       else{
         while(PAGING_PAGE_IN_SWAP(vicpte)){
-          //printf("Victim o trong SWAP!!!\n"); //lỗi này căng
           find_victim_page(caller->mm, &vicpgn, &ret_ptbl);
           vicpte = ret_ptbl[vicpgn];
         }
@@ -227,40 +201,21 @@ int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struc
      
       /* Get free frame in MEMSWP */
       MEMPHY_get_freefp(caller->active_mswp, &swpfpn);
-      //printf("this frame then move to frame %d in SWAP\n", swpfpn);
-      /* Do swap frame from MEMRAM to MEMSWP and vice versa*/
-      /* Copy victim frame to swap */
-      //printf("data in RAM before copy content\n");
       MEMPHY_dump(caller->mram); 
-      //printf("...xong roi\n");
-      //printf("data in SWAP before copy content\n");
       MEMPHY_dump(caller->active_mswp);
-      //printf("...xong roi\n");
       __swap_cp_page(caller->mram, vicfpn, caller->active_mswp, swpfpn);
-      //printf("data in RAM after copy content\n");
       MEMPHY_dump(caller->mram); 
-      //printf("...xong roi\n");
-      //printf("data in SWAP after copy content\n");
       MEMPHY_dump(caller->active_mswp);
-      //printf("...xong roi\n");
-      //printf("victim frame in RAM move to SWAP frame %d\n", swpfpn);
-      // Cập nhật lại PTE chứ, của thằng owner (ret_ptbl) bị swap out ấy
-      //Nếu trước đó nó đã bị free -> bit present = 0 thì vẫn giữ như vậy
       int exist = 1; 
       if(!PAGING_PAGE_PRESENT(ret_ptbl[vicpgn])) {
-       // printf("Frame nay bi free truoc do\n");
         exist = 0;
       }
-      pte_set_swap(ret_ptbl + vicpgn, 0, swpfpn); // victim page của proc nào đó giờ PTE nó cập nhật về swpfpn
+      pte_set_swap(ret_ptbl + vicpgn, 0, swpfpn); 
       if(!exist) CLRBIT(*(ret_ptbl + vicpgn), PAGING_PTE_PRESENT_MASK);
-      if(!PAGING_PAGE_PRESENT(ret_ptbl[vicpgn])) {
-        //printf("Confirm giu lai\n");
-      }
+      
 
-      //Thêm frame đó vào freeframe của RAM
       MEMPHY_put_freefp(caller->mram, vicfpn);
       
-      //Chạy lại
       pgit--;
    } 
  }
@@ -290,7 +245,7 @@ int vm_map_ram(struct pcb_t *caller, int astart, int aend, int mapstart, int inc
    *in endless procedure of swap-off to get frame and we have not provide 
    *duplicate control mechanism, keep it simple
    */
-  ret_alloc = alloc_pages_range(caller, incpgnum, &frm_lst); //tìm cho đủ rồi bỏ vào frm_lst
+  ret_alloc = alloc_pages_range(caller, incpgnum, &frm_lst); 
 
   if (ret_alloc < 0 && ret_alloc != -3000)
     return -1;
@@ -350,10 +305,10 @@ int init_mm(struct mm_struct *mm, struct pcb_t *caller)
   mm->pgd = malloc(PAGING_MAX_PGN*sizeof(uint32_t));
 
   /* By default the owner comes with at least one vma */
-  vma->vm_id = 0; //thầy ghi 1 nè, chuyển thành 0
+  vma->vm_id = 0; 
   vma->vm_start = 0;
   vma->vm_end = vma->vm_start;
-  vma->sbrk = vma->vm_start; //cái end với sbrk nói vậy cho vui :0
+  vma->sbrk = vma->vm_start; 
   struct vm_rg_struct *first_rg = init_vm_rg(vma->vm_start, vma->vm_end);
   enlist_vm_rg_node(&vma->vm_freerg_list, first_rg);
 
@@ -361,8 +316,6 @@ int init_mm(struct mm_struct *mm, struct pcb_t *caller)
   vma->vm_mm = mm; /*point back to vma owner */
 
   mm->mmap = vma;
-  //Thêm vô
-  //Liệu caller->mm có khác mm?
   if(caller->mm != mm) {
     printf("caller->mm != mm\n");
   }
@@ -395,7 +348,7 @@ int enlist_pgn_node(struct pgn_t **plist, int pgn, struct mm_struct* owner)
   pnode->cur = 1;
   pnode->pgn = pgn;
   pnode->pg_next = *plist;
-  pnode->owner = owner; //thêm
+  pnode->owner = owner;
   *plist = pnode;
   
   return 0;

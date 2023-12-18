@@ -150,8 +150,7 @@ int MEMPHY_get_freefp(struct memphy_struct *mp, int *retfpn) //alloc doi thi cho
    /* MEMPHY is iteratively used up until its exhausted
     * No garbage collector acting then it not been released
     */
-   free(fp); // free vi h cai trong mp la cai moi (chi quan ly cai head thoi!) 
-               // o tren return value chu k phai addr!
+   free(fp); 
 
    return 0;
 }
@@ -162,14 +161,13 @@ int MEMPHY_dump(struct memphy_struct * mp)
      *     for tracing the memory content
      */
 
-    // bỏ qua cx đc, in ra chỗ nào khác 0
     for(int i = 0; i < mp->maxsz; i++) {
-      //if(mp->storage[i] != 0) printf("At byte %d: %c\n", i, mp->storage[i]);
+      if(mp->storage[i] != 0) printf("At byte %d: %c\n", i, mp->storage[i]);
     }
     return 0;
 }
 
-int MEMPHY_put_freefp(struct memphy_struct *mp, int fpn) // tim victim frame xong swap ra -> dc freeframe moi tai cai fpn do
+int MEMPHY_put_freefp(struct memphy_struct *mp, int fpn)
 {
    struct framephy_struct *fp = mp->free_fp_list;
    struct framephy_struct *newnode = malloc(sizeof(struct framephy_struct));
